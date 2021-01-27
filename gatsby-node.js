@@ -12,7 +12,7 @@ exports.sourceNodes = async ({
     baseURL: '',
     folder: '',
     accessToken: '',
-    sanitizeHtmlConfig: {},    
+    sanitizeHtmlConfig: {},
     customComponents: [],
   }
   
@@ -57,6 +57,7 @@ exports.sourceNodes = async ({
     store,
     cache,
     createNode,
+    createNodeId,
     assetsMap,
     config,
   });
@@ -64,4 +65,4 @@ exports.sourceNodes = async ({
   await createNodesHelpers.createItemsNodes();
 };
 
-exports.setFieldsOnGraphQLNodeType = extendNodeType;
+// exports.setFieldsOnGraphQLNodeType = extendNodeType;

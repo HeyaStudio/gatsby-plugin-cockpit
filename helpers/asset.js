@@ -92,4 +92,5 @@ class AssetMapHelpers {
 module.exports = {
   AssetMapHelpers,
   createAssetsMap,
+  createRemoteAssetByPath,
 };

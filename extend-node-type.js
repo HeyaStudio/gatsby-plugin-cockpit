@@ -97,6 +97,19 @@ module.exports = async (
         },
       };
     });
+
+    const wysiwygFields = Object.keys(fields).filter(
+      fieldname => fields[fieldname].type === 'wysiwyg'
+    );
+    wysiwygFields.forEach(fieldname => {
+      nodeExtendType[`${fieldname}_parsed`] = {
+        type: "String",
+        resolve(Item) {
+          const parsedWysiwyg = parseWysiwygField(Item[`${fieldname}`]);
+          return parsedWysiwyg;
+        },
+      };
+    });
   });
   return nodeExtendType;
 };
