@@ -30,11 +30,12 @@ async function createAssetsMap(assetPromises) {
 }
 
 class AssetMapHelpers {
-  constructor({ assets, store, cache, createNode, collectionsItems, config }) {
+  constructor({ assets, store, cache, createNode, createNodeId, collectionsItems, config }) {
     this.assets = assets;
     this.store = store;
     this.cache = cache;
     this.createNode = createNode;
+    this.createNodeId = createNodeId;
     this.collectionsItems = collectionsItems;
     this.config = config;
     this.config.host = config.baseURL + config.folder;
@@ -78,7 +79,8 @@ class AssetMapHelpers {
         asset.path,
         this.store,
         this.cache,
-        this.createNode
+        this.createNode,
+        this.createNodeId
       )
     );
 
