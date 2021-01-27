@@ -54,6 +54,12 @@ module.exports = class CreateNodesHelpers {
     )
   }
 
+  getGalleryFields(fields) {
+    return Object.keys(fields).filter(
+      (fieldname) => fields[fieldname].type === 'gallery'
+    )
+  }
+
   getWysiwygFields(fields) {
     return Object.keys(fields).filter(
       (fieldname) => fields[fieldname].type === 'wysiwyg'
@@ -106,21 +112,46 @@ module.exports = class CreateNodesHelpers {
     }, {})
   }
 
+    // map the entry image fields to link to the asset node
+  // the important part is the `___NODE`.
+  composeEntryGalleryFields(assetFields, entry) {
+    return assetFields.reduce((acc, fieldname) => {
+      if (entry[fieldname] == undefined || entry[fieldname].length == 0) {
+        return acc
+      }
+
+      let images = [];
+      entry[fieldname] = entry[fieldname].reduce((image) => {
+        let fileLocation = this.getFileAsset(image.path)
+        
+      });
+
+      let fileLocation = this.getFileAsset(entry[fieldname].path)
+
+      entry[fieldname].localFile___NODE = fileLocation
+      const newAcc = {
+        ...acc,
+        [fieldname]: entry[fieldname],
+      }
+      return newAcc
+    }, {})
+  }
+
   // map the entry image fields to link to the asset node
   // the important part is the `___NODE`.
   async composeEntryWysiwygFields(wysiwygFields, entry) {
     return wysiwygFields.reduce(async (acc, fieldname) => {
       const {
-        wysiwygImagesMap,
-        imageSources,
-        images,
+        wysiwygMediasMap,
+        mediaSources,
+        medias,
       } = await this.parseWysiwygField(entry[fieldname])
-      Object.entries(wysiwygImagesMap).forEach(([key, value], index) => {
-        const { name, ext, contentDigest } = images[index]
+      Object.entries(wysiwygMediasMap).forEach(([key, value], index) => {
+        const { name, ext, contentDigest } = medias[index]
         const newUrl = '/static/' + contentDigest + '/' + name + ext
         if (entry[fieldname]) {
           entry[fieldname] = entry[fieldname].replace(
-            imageSources[index],
+            mediaSources[index],
             newUrl
           )
         }
@@ -148,24 +179,40 @@ module.exports = class CreateNodesHelpers {
 
   async parseWysiwygField(field) {
     const srcRegex = /src\s*=\s*"(.+?)"/gi
-    let imageSources
+    const hrefRegex = /href\s*=\s*"(.+?)"/gi
+    let mediaSources, hrefSources = []
     try {
-      imageSources = field
+      mediaSources = field
         .match(srcRegex)
         .map((src) => src.substr(5).slice(0, -1))
+      hrefSources = field
+        .match(hrefRegex)
+        .map((src) => src.substr(6).slice(0, -1))
     } catch (error) {
       return {
-        images: [],
-        wysiwygImagesMap: [],
-        imageSources: [],
+        medias: [],
+        wysiwygMediasMap: [],
+        mediaSources: [],
+
+        hrefSources: [],
+        hrefLocalURLs: [],
       }
     }
+    
+    mediaSources.forEach(src => {
+      console.log(src);
+      console.log(this.isExternalURL(src));
+    });
 
-    const validImageUrls = imageSources
-                          .filter((src) => !validUrl.isUri(src)) // We don't need to cache external image links
+    const validMediaUrls = mediaSources
+                          .filter((src) => !this.isExternalURL(src)) // We don't need to cache external links
                           .map((src) => this.config.host + src)
 
-    const wysiwygImagesPromises = validImageUrls.map((url) =>
+    const validHrefUrls = hrefSources
+                          .filter((src) => !this.isExternalURL(src)) // We don't need to cache external links
+                          .map((src) => this.config.host + src)
+
+    const wysiwygMediasPromises = validMediaUrls.map((url) =>
       createRemoteAssetByPath(
         url,
         this.store,
@@ -175,21 +222,43 @@ module.exports = class CreateNodesHelpers {
       )
     )
 
-    const imagesFulfilled = await Promise.all(wysiwygImagesPromises)
+    const mediasFulfilled = await Promise.all(wysiwygMediasPromises)
 
-    const images = imagesFulfilled.map(({ contentDigest, ext, name }) => ({
+    const medias = mediasFulfilled.map(({ contentDigest, ext, name }) => ({
       contentDigest,
       ext,
       name,
     }))
 
-    const wysiwygImagesMap = await createAssetsMap(imagesFulfilled)
+    const wysiwygMediasMap = await createAssetsMap(mediasFulfilled)
 
     return {
-      images,
-      wysiwygImagesMap,
-      imageSources,
+      medias,
+      wysiwygMediasMap,
+      mediaSources,
+
+      hrefSources,
+      hrefLocalURLs: [],
     }
+  }
+
+  isExternalURL(src) {
+    console.log(src);
+    if (validUrl.isUri(src) === undefined) {
+      return false;
+    }
+
+    if (!validUrl.isHttpUri(src) && !validUrl.isHttpsUri(src)) {
+      return false;
+    }
+
+    const url = new URL(src);
+    const configURL = new URL(this.config.host);
+    console.log(url.hostname + " vs " + configURL.hostname);
+    if (url.hostname != configURL.hostname) {
+      return false;
+    }
+    return true;
   }
 
   getFileAsset(path) {
@@ -273,7 +342,7 @@ module.exports = class CreateNodesHelpers {
     const parsedLayout = layout.map((node) => {
       if (node.component === 'text' || node.component === 'html') {
         this.parseWysiwygField(node.settings.text || node.settings.html).then(
-          ({ wysiwygImagesMap, imageSources, images }) => {
+          ({ wysiwygMediasMap: wysiwygImagesMap, imageSources, medias: images }) => {
             Object.entries(wysiwygImagesMap).forEach(([key, value], index) => {
               const { name, ext, contentDigest } = images[index]
               const newUrl = '/static/' + name + '-' + contentDigest + ext
