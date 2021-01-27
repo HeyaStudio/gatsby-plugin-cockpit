@@ -9,6 +9,7 @@ module.exports = class CreateNodesHelpers {
     store,
     cache,
     createNode,
+    createNodeId,
     assetsMap,
     config,
   }) {
@@ -17,6 +18,7 @@ module.exports = class CreateNodesHelpers {
     this.store = store;
     this.cache = cache;
     this.createNode = createNode;
+    this.createNodeId = createNodeId;
     this.assetsMap = assetsMap;
     this.config = config;
   }
@@ -130,7 +132,7 @@ module.exports = class CreateNodesHelpers {
     );
 
     const wysiwygImagesPromises = validImageUrls.map(url =>
-      createRemoteAssetByPath(url, this.store, this.cache, this.createNode)
+      createRemoteAssetByPath(url, this.store, this.cache, this.createNode, this.createNodeId)
     );
 
     const imagesFulfilled = await Promise.all(wysiwygImagesPromises);

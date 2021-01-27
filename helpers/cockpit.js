@@ -30,17 +30,16 @@ module.exports = class CockpitHelpers {
   }
 
   // get cockpit collection items by collection name
-  async getSingletonItems(name) {
-    const values = await this.cockpit.singletonData(name);
-    const template = await this.cockpit.singletonGet(name);
-    return { data: {values, template}, name };
+  async getSingletonItem(name) {
+    const data = await this.cockpit.singletonGet(name);
+    return { data: data, name };
   }
 
   // get all cockpit singletons, together with their items
   async getCockpitSingletons() {
     const singletons = await this.getSingletonNames();
     return Promise.all(singletons.map(name => {
-      var i = this.getSingletonItems(name);
+      var i = this.getSingletonItem(name);
       return i;
     }));
   }  
