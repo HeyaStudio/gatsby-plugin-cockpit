@@ -1,0 +1,33 @@
+{
+  "name": "gatsby-plugin-cockpit",
+  "description": "Gatsby source plugin for Cockpit headless CMS API.",
+  "author": "Paul Hayes <paul@ginetta.net>",
+  "version": "1.0.39",
+  "keywords": [
+    "gatsby",
+    "gatsby-plugin",
+    "gatsby-source-plugin",
+    "cockpit"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "cockpit-sdk": "^0.15.1",
+    "gatsby-source-filesystem": "^2.10.0",
+    "graphql-type-json": "^0.3.2",
+    "html-to-react": "^1.4.5",
+    "pluralize": "^8.0.0",
+    "react-styling": "^1.6.4",
+    "sanitize-html": "^2.3.2",
+    "valid-url": "^1.0.9"
+  },
+  "devDependencies": {
+    "babel-eslint": "^10.1.0",
+    "eslint": "^7.18.0",
+    "eslint-config-fbjs": "^3.1.1",
+    "eslint-plugin-babel": "^5.3.1",
+    "eslint-plugin-flowtype": "^5.2.0",
+    "eslint-plugin-jsx-a11y": "^6.4.1",
+    "eslint-plugin-markdown": "^1.0.2",
+    "eslint-plugin-react": "^7.22.0"
+  }
+}
