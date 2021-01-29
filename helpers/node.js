@@ -2,6 +2,7 @@ const { singular } = require('pluralize')
 const crypto = require('crypto')
 const validUrl = require('valid-url')
 const { createRemoteAssetByPath, createAssetsMap } = require('./asset')
+const { entries } = require('lodash')
 
 module.exports = class CreateNodesHelpers {
   constructor({
@@ -25,27 +26,31 @@ module.exports = class CreateNodesHelpers {
   }
 
   async createItemsNodes() {
-    Promise.all(
-      this.collectionsItems.map(({ fields, entries, name }) => {
-        const nodes = entries.map((entry) =>
-          this.createCollectionItemNode({
+    var itemsNodes = []
+    for (var i = 0; i < this.collectionsItems.length; i++) { 
+      let { fields, entries, name: collName } = this.collectionsItems[i];
+      for (var j = 0; j < entries.length; j++) {
+          let entry = entries[j];
+          let nodes = await this.createCollectionItemNode({
             entry,
-            name,
+            name: collName,
             fields,
-          })
-        )
+          });
+          itemsNodes.push({ collName, nodes, fields });
+      }
+    }
 
-        return { name, nodes, fields }
-      }),
-      this.singletonsItems.map(({ name, data }) => {
-        const node = this.createSingletonItemNode({
-          data,
-          name,
-        })
+    for (var i = 0; i < this.singletonsItems.length; i++) { 
+      var { data, name: singletonName } = this.singletonsItems[i];
+      console.log(singletonName);
+      let node = this.createSingletonItemNode({
+        data,
+        name: singletonName,
+      });
+      itemsNodes.push({ name: 'singleton', node});
+    }
 
-        return { name: 'singleton', node }
-      })
-    )
+    return itemsNodes;
   }
 
   getImageFields(fields) {
@@ -198,19 +203,19 @@ module.exports = class CreateNodesHelpers {
         hrefLocalURLs: [],
       }
     }
-    
-    mediaSources.forEach(src => {
-      console.log(src);
-      console.log(this.isExternalURL(src));
-    });
 
     const validMediaUrls = mediaSources
-                          .filter((src) => !this.isExternalURL(src)) // We don't need to cache external links
-                          .map((src) => this.config.host + src)
+                           .filter((src) => !this.isExternalURL(src)) // We don't need to cache external links
+                           .map((src) => {
+                             console.log(src);
+                             return validUrl.isUri(src) ? src : this.config.host + src;
+                           });
+
+    validMediaUrls.forEach(src => console.log(src));
 
     const validHrefUrls = hrefSources
                           .filter((src) => !this.isExternalURL(src)) // We don't need to cache external links
-                          .map((src) => this.config.host + src)
+                          .map((src) => validUrl.isUri(src) ? src : this.config.host + src)
 
     const wysiwygMediasPromises = validMediaUrls.map((url) =>
       createRemoteAssetByPath(
@@ -243,7 +248,6 @@ module.exports = class CreateNodesHelpers {
   }
 
   isExternalURL(src) {
-    console.log(src);
     if (validUrl.isUri(src) === undefined) {
       return false;
     }
@@ -254,8 +258,7 @@ module.exports = class CreateNodesHelpers {
 
     const url = new URL(src);
     const configURL = new URL(this.config.host);
-    console.log(url.hostname + " vs " + configURL.hostname);
-    if (url.hostname != configURL.hostname) {
+    if (url.hostname.startsWith("192.168.") || url.hostname === configURL.hostname) {
       return false;
     }
     return true;
@@ -488,7 +491,7 @@ module.exports = class CreateNodesHelpers {
     return node
   }
 
-  createSingletonItemNode({ data, name }) {
+  async createSingletonItemNode({ data, name }) {
     const node = {
       ...data,
       name: name,
