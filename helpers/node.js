@@ -27,30 +27,30 @@ module.exports = class CreateNodesHelpers {
 
   async createItemsNodes() {
     var itemsNodes = []
-    for (var i = 0; i < this.collectionsItems.length; i++) { 
-      let { fields, entries, name: collName } = this.collectionsItems[i];
+    for (var i = 0; i < this.collectionsItems.length; i++) {
+      let { fields, entries, name: collName } = this.collectionsItems[i]
       for (var j = 0; j < entries.length; j++) {
-          let entry = entries[j];
-          let nodes = await this.createCollectionItemNode({
-            entry,
-            name: collName,
-            fields,
-          });
-          itemsNodes.push({ collName, nodes, fields });
+        let entry = entries[j]
+        let nodes = await this.createCollectionItemNode({
+          entry,
+          name: collName,
+          fields,
+        })
+        itemsNodes.push({ collName, nodes, fields })
       }
     }
 
-    for (var i = 0; i < this.singletonsItems.length; i++) { 
-      var { data, name: singletonName } = this.singletonsItems[i];
-      console.log(singletonName);
+    for (var i = 0; i < this.singletonsItems.length; i++) {
+      var { data, name: singletonName } = this.singletonsItems[i]
+      console.log(singletonName)
       let node = this.createSingletonItemNode({
         data,
         name: singletonName,
-      });
-      itemsNodes.push({ name: 'singleton', node});
+      })
+      itemsNodes.push({ name: 'singleton', node })
     }
 
-    return itemsNodes;
+    return itemsNodes
   }
 
   getImageFields(fields) {
@@ -92,7 +92,7 @@ module.exports = class CreateNodesHelpers {
   getOtherFields(fields) {
     return Object.keys(fields).filter(
       (fieldname) =>
-        !['image', 'asset', 'collectionlink', 'wysiwyg'].includes(
+        !['image', 'asset', 'collectionlink', 'wysiwyg', 'gallery'].includes(
           fields[fieldname].type
         )
     )
@@ -117,7 +117,7 @@ module.exports = class CreateNodesHelpers {
     }, {})
   }
 
-    // map the entry image fields to link to the asset node
+  // map the entry image fields to link to the asset node
   // the important part is the `___NODE`.
   composeEntryGalleryFields(assetFields, entry) {
     return assetFields.reduce((acc, fieldname) => {
@@ -125,15 +125,13 @@ module.exports = class CreateNodesHelpers {
         return acc
       }
 
-      let images = [];
-      entry[fieldname] = entry[fieldname].reduce((image) => {
+      entry[fieldname] = entry[fieldname].map((image) => {
+        //  let fileLocation = this.getFileAsset(image)
         let fileLocation = this.getFileAsset(image.path)
-        
-      });
+        image.localFile___NODE = fileLocation
+        return image
+      })
 
-      let fileLocation = this.getFileAsset(entry[fieldname].path)
-
-      entry[fieldname].localFile___NODE = fileLocation
       const newAcc = {
         ...acc,
         [fieldname]: entry[fieldname],
@@ -185,7 +183,8 @@ module.exports = class CreateNodesHelpers {
   async parseWysiwygField(field) {
     const srcRegex = /src\s*=\s*"(.+?)"/gi
     const hrefRegex = /href\s*=\s*"(.+?)"/gi
-    let mediaSources, hrefSources = []
+    let mediaSources,
+      hrefSources = []
     try {
       mediaSources = field
         .match(srcRegex)
@@ -205,17 +204,17 @@ module.exports = class CreateNodesHelpers {
     }
 
     const validMediaUrls = mediaSources
-                           .filter((src) => !this.isExternalURL(src)) // We don't need to cache external links
-                           .map((src) => {
-                             console.log(src);
-                             return validUrl.isUri(src) ? src : this.config.host + src;
-                           });
+      .filter((src) => !this.isExternalURL(src)) // We don't need to cache external links
+      .map((src) => {
+        console.log(src)
+        return validUrl.isUri(src) ? src : this.config.host + src
+      })
 
-    validMediaUrls.forEach(src => console.log(src));
+    validMediaUrls.forEach((src) => console.log(src))
 
     const validHrefUrls = hrefSources
-                          .filter((src) => !this.isExternalURL(src)) // We don't need to cache external links
-                          .map((src) => validUrl.isUri(src) ? src : this.config.host + src)
+      .filter((src) => !this.isExternalURL(src)) // We don't need to cache external links
+      .map((src) => (validUrl.isUri(src) ? src : this.config.host + src))
 
     const wysiwygMediasPromises = validMediaUrls.map((url) =>
       createRemoteAssetByPath(
@@ -249,19 +248,22 @@ module.exports = class CreateNodesHelpers {
 
   isExternalURL(src) {
     if (validUrl.isUri(src) === undefined) {
-      return false;
+      return false
     }
 
     if (!validUrl.isHttpUri(src) && !validUrl.isHttpsUri(src)) {
-      return false;
+      return false
     }
 
-    const url = new URL(src);
-    const configURL = new URL(this.config.host);
-    if (url.hostname.startsWith("192.168.") || url.hostname === configURL.hostname) {
-      return false;
+    const url = new URL(src)
+    const configURL = new URL(this.config.host)
+    if (
+      url.hostname.startsWith('192.168.') ||
+      url.hostname === configURL.hostname
+    ) {
+      return false
     }
-    return true;
+    return true
   }
 
   getFileAsset(path) {
@@ -345,7 +347,11 @@ module.exports = class CreateNodesHelpers {
     const parsedLayout = layout.map((node) => {
       if (node.component === 'text' || node.component === 'html') {
         this.parseWysiwygField(node.settings.text || node.settings.html).then(
-          ({ wysiwygMediasMap: wysiwygImagesMap, imageSources, medias: images }) => {
+          ({
+            wysiwygMediasMap: wysiwygImagesMap,
+            imageSources,
+            medias: images,
+          }) => {
             Object.entries(wysiwygImagesMap).forEach(([key, value], index) => {
               const { name, ext, contentDigest } = images[index]
               const newUrl = '/static/' + name + '-' + contentDigest + ext
@@ -448,11 +454,16 @@ module.exports = class CreateNodesHelpers {
     const imageFields = this.getImageFields(fields)
     const assetFields = this.getAssetFields(fields)
     const layoutFields = this.getLayoutFields(fields)
+    const galleryFields = this.getGalleryFields(fields)
     const wysiwygFields = this.getWysiwygFields(fields)
     const collectionLinkFields = this.getCollectionLinkFields(fields)
     const otherFields = this.getOtherFields(fields)
     //2
     const entryImageFields = this.composeEntryAssetFields(imageFields, entry)
+    const entryGalleryFields = this.composeEntryGalleryFields(
+      galleryFields,
+      entry
+    )
     const entryAssetFields = this.composeEntryAssetFields(assetFields, entry)
     const entryWysiwygFields = await this.composeEntryWysiwygFields(
       wysiwygFields,
@@ -472,6 +483,7 @@ module.exports = class CreateNodesHelpers {
     const node = {
       ...entryWithOtherFields,
       ...entryImageFields,
+      ...entryGalleryFields,
       ...entryAssetFields,
       ...entryCollectionLinkFields,
       ...entryWysiwygFields,
@@ -487,6 +499,8 @@ module.exports = class CreateNodesHelpers {
           .digest(`hex`),
       },
     }
+    console.log('!!!!!')
+    console.log(node)
     this.createNode(node)
     return node
   }
